@@ -8,7 +8,20 @@ from base64 import b64decode
 import random
 from ergonomica.lib.interface.prompt import prompt
 import string
+from ergonomica.ergo import ergo
 from ergonomica.lib.lang.environment import Environment
+
+def file_lines(stdin):
+    split_lines = []
+    for line in stdin.split("\n"):
+        if line.startswith("#"):
+            pass
+        elif line.startswith(" "):
+            split_lines[-1] += line
+        else:
+            split_lines.append(line)
+    return split_lines
+        
 
 vowels = list('aeiou')
 
@@ -48,51 +61,45 @@ def keygen():
     return os.urandom(16).decode("utf-8")
 
 def sendmsg(ip, port, msg):
-    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    clientsocket.connect((ip, port))
-    clientsocket.send(msg)
-
-def connect(ip="0.0.0.0", port=2222):
-    key = input("[ergo: remote]: Please enter a key: ")
-    
     # Create a TCP/IP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     # Connect the socket to the port where the server is listening
     server_address = (ip, port)
-    print >>sys.stderr, 'connecting to %s port %s' % ip
-    sock.connect(ip)
+    print >>sys.stderr, 'connecting to %s port %s' % (ip,port)
+    sock.connect((ip, port))
+    
+    recv = ""
     
     try:
     
-        # Send data
-        message = 'This is the message.  It will be repeated.'
-        #print >>sys.stderr, 'sending "%s"' % message
-        sock.sendall(message)
-
-        # Look for the response
-        amount_received = 0
-        amount_expected = len(message)
+        sock.sendall(msg)
     
-        while amount_received < amount_expected:
-            data = sock.recv(16)
-            amount_received += len(data)
-            print("Recv" + data)
-            #print >>sys.stderr, 'received "%s"' % data
 
+        recv = sock.recv(1000)
+            
     finally:
-        print("clsoin'")
         #print >>sys.stderr, 'closing socket'
         sock.close()
     
+    return recv
+
+
+def connect(ip="0.0.0.0", port=2222):
+    key = input("[ergo: remote]: Please enter a key: ")
+        
+    while True:
+        stdin = str(prompt(Environment(), {}))
+        for line in file_lines(stdin):
+            print(sendmsg(ip, port, line))
+            # if isinstance(stdout, list):
+            #     print("\n".join([str(x) for x in stdout if x != None]))
+            # else:
+            #     if stdout != None:
+            #         print(stdout)
+            # print_ergosendmsg(line)
     
-    sendmsg(ip, port, 'hello')
-    
-    # stdin = str(prompt(Environment(), {}))
-    # for line in file_lines(stdin):
-    #     sendmsg(line)
-    
-    # initialize ptk
+        # initialize ptk
     
     
 def server(port=2222):
@@ -119,7 +126,7 @@ def server(port=2222):
                 print("[ergo: remote]:<{}> {}".format(client_address, data))
                 if data:
                     #print >>sys.stderr, 'sending data back to the client'
-                    connection.sendall(data)
+                    connection.sendall(str(ergo(data)))
                 else:
                     print("No more data from client!")
                     break
@@ -128,6 +135,5 @@ def server(port=2222):
             # Clean up the connection
             connection.close()
 
-
-#server()   
-connect("0.0.0.0")
+exports = {'connect': connect,
+           'server': server}
