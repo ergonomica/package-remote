@@ -8,7 +8,7 @@ from base64 import b64decode
 import random
 from ergonomica.lib.interface.prompt import prompt
 import string
-from ergonomica.ergo import ergo
+
 from ergonomica.lib.lang.environment import Environment
 
 def file_lines(stdin):
@@ -66,20 +66,15 @@ def sendmsg(ip, port, msg):
 
     # Connect the socket to the port where the server is listening
     server_address = (ip, port)
-    print >>sys.stderr, 'connecting to %s port %s' % (ip,port)
     sock.connect((ip, port))
     
     recv = ""
     
     try:
-    
         sock.sendall(msg)
-    
-
         recv = sock.recv(1000)
             
     finally:
-        #print >>sys.stderr, 'closing socket'
         sock.close()
     
     return recv
@@ -88,21 +83,17 @@ def sendmsg(ip, port, msg):
 def connect(ip="0.0.0.0", port=2222):
     key = input("[ergo: remote]: Please enter a key: ")
         
+    Env = Environment()
+    Env.prompt = "({}).: ".format(ip)
     while True:
-        stdin = str(prompt(Environment(), {}))
+        stdin = str(prompt(Env, {}))
         for line in file_lines(stdin):
-            print(sendmsg(ip, port, line))
-            # if isinstance(stdout, list):
-            #     print("\n".join([str(x) for x in stdout if x != None]))
-            # else:
-            #     if stdout != None:
-            #         print(stdout)
-            # print_ergosendmsg(line)
-    
-        # initialize ptk
-    
+            print(sendmsg(ip, port, key + line))
+
     
 def server(port=2222):
+    from ergonomica.ergo import ergo_to_string
+    
     print("[ergo: remote]: Starting an Ergonomica server locally on 0.0.0.0:{}...".format(str(port)))
     
     key = gen_valid_word() + " " + gen_valid_word() + " " + gen_valid_word()    
@@ -122,11 +113,14 @@ def server(port=2222):
 
             # Receive the data in small chunks and retransmit it
             while True:
-                data = connection.recv(1024)
-                print("[ergo: remote]:<{}> {}".format(client_address, data))
+                data = connection.recv(8192)
                 if data:
-                    #print >>sys.stderr, 'sending data back to the client'
-                    connection.sendall(str(ergo(data)))
+                    if data.startswith(key):
+                        data = data[len(key):]
+                        print("[ergo: remote]:<{}> {}".format(client_address, data))
+                        connection.sendall(str(ergo_to_string(data)))
+                    else:
+                        print("[ergo: remote]: UNAUTHENTICATED CLIENT.")
                 else:
                     print("No more data from client!")
                     break
