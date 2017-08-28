@@ -92,7 +92,7 @@ def connect(ip="0.0.0.0", port=2222):
 
     
 def server(port=2222):
-    from ergonomica.ergo import ergo_to_string
+    from ergonomica.lib.lang.interpreter import ergo_to_string
     
     print("[ergo: remote]: Starting an Ergonomica server locally on 0.0.0.0:{}...".format(str(port)))
     
